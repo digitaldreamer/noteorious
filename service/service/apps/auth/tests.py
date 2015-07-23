@@ -125,11 +125,13 @@ class AuthAPI(unittest.TestCase):
         self.settings = appconfig('config:{}'.format(os.environ['PYRAMID_SETTINGS']), relative_to='.')
         app = main({}, **self.settings)
         self.testapp = TestApp(app)
+        self.config = testing.setUp(settings=self.settings)
 
         self.user = User.create('hello@example.com', 'hello')
 
     def tearDown(self):
         self.user.delete()
+        testing.tearDown()
 
     def test_auth_get(self):
         response = self.testapp.get('/authenticate', status=200)
@@ -139,17 +141,14 @@ class AuthAPI(unittest.TestCase):
     def test_auth_post(self):
         response = self.testapp.post_json('/authenticate', {}, status=400)
 
-        params = {
+        payload = {
             'email': 'wrong',
             'password': 'wrong',
         }
-        response = self.testapp.post_json('/authenticate', params, status=401)
+        response = self.testapp.post_json('/authenticate', payload, status=401)
 
-        params = {
+        payload = {
             'email': 'hello@example.com',
             'password': 'hello',
         }
-        response = self.testapp.post_json('/authenticate', params, status=200)
-
-        print response
-        self.assertFalse(True)
+        response = self.testapp.post_json('/authenticate', payload, status=200)

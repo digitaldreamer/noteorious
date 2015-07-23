@@ -9,6 +9,7 @@ from auth.schemas import AuthSchema, UserSchema
 
 
 auth = Service(name='authenticate', path='/authenticate', description='Authentication')
+users = Service(name='users', path='/users', description='Users')
 user = Service(name='user', path='/users/{user_id}', description='User')
 
 
