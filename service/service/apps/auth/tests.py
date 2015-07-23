@@ -6,15 +6,13 @@ from auth.models import User
 from auth.exceptions import UserSaveError
 
 
-class UserModelTests(unittest.TestCase):
+class UserModel(unittest.TestCase):
     def setUp(self):
-        from service import main
         from paste.deploy import appconfig
-        from webtest import TestApp
 
-        # set settings
         os.environ['PYRAMID_SETTINGS'] = 'development.ini#main'
-        self.config = testing.setUp()
+        self.settings = appconfig('config:{}'.format(os.environ['PYRAMID_SETTINGS']), relative_to='.')
+        self.config = testing.setUp(settings=self.settings)
         self.reset()
 
     def tearDown(self):
@@ -114,3 +112,44 @@ class UserModelTests(unittest.TestCase):
 
             if user:
                 user.delete()
+
+
+class AuthAPI(unittest.TestCase):
+    def setUp(self):
+        from service import main
+        from paste.deploy import appconfig
+        from webtest import TestApp
+
+        # set settings
+        os.environ['PYRAMID_SETTINGS'] = 'development.ini#main'
+        self.settings = appconfig('config:{}'.format(os.environ['PYRAMID_SETTINGS']), relative_to='.')
+        app = main({}, **self.settings)
+        self.testapp = TestApp(app)
+
+        self.user = User.create('hello@example.com', 'hello')
+
+    def tearDown(self):
+        self.user.delete()
+
+    def test_auth_get(self):
+        response = self.testapp.get('/authenticate', status=200)
+        self.assertTrue('hello' in response.json)
+        self.assertTrue(response.json['hello'] == 'world')
+
+    def test_auth_post(self):
+        response = self.testapp.post_json('/authenticate', {}, status=400)
+
+        params = {
+            'email': 'wrong',
+            'password': 'wrong',
+        }
+        response = self.testapp.post_json('/authenticate', params, status=401)
+
+        params = {
+            'email': 'hello@example.com',
+            'password': 'hello',
+        }
+        response = self.testapp.post_json('/authenticate', params, status=200)
+
+        print response
+        self.assertFalse(True)

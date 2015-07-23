@@ -1,18 +1,23 @@
 import bcrypt
+import copy
+import json
 
 from bson import ObjectId
-from storage.mongo import mongodb
 from datetime import datetime
+
 from service import logger
+from service.utils.jsonencoder import ComplexEncoder
+from storage.mongo import mongodb
 from auth.exceptions import UserSaveError
 
 
 class User(object):
     data = {}
 
-    def __init__(self, email='', password='', mongo=None):
+    def __init__(self, email='', password='', active=False, mongo=None):
         now = datetime.utcnow()
         self.data = {
+            'active': 'false',
             'email': '',
             'password': '',
             'created': now,
@@ -26,6 +31,23 @@ class User(object):
         if mongo:
             self.data = mongo
             self.data['_id'] = ObjectId(mongo['_id'])
+
+    @property
+    def json_raw(self):
+        """
+        generate the raw json
+        """
+        return json.dumps(self.data, cls=ComplexEncoder)
+
+    @property
+    def json(self):
+        """
+        generate cleaned json
+        """
+        data = copy.deepcopy(self.data)
+        data['id'] = data.pop('_id')
+        data.pop('password')
+        return json.dumps(data, cls=ComplexEncoder)
 
     @property
     def id(self):
@@ -48,7 +70,7 @@ class User(object):
         from settings import config
 
         pepper = config.get('pepper', '')
-        hashed = bcrypt.hashpw(password + pepper, bcrypt.gensalt())
+        hashed = bcrypt.hashpw(str(password) + pepper, bcrypt.gensalt())
         self.data['password'] = hashed
 
     def authenticate(self, password):
@@ -59,7 +81,7 @@ class User(object):
 
         validated = False
         pepper = config.get('pepper', '')
-        hashed = bcrypt.hashpw(password + pepper, self.data.get('password', '').encode('utf8'))
+        hashed = bcrypt.hashpw(str(password) + pepper, self.data.get('password', '').encode('utf8'))
 
         if hashed == self.data.get('password', ''):
             validated = True
@@ -138,7 +160,7 @@ class User(object):
         return user
 
     @classmethod
-    def create(cls, email, password):
+    def create(cls, email, password, active=False):
         """
         creates, saves, and returns a new user
         """
@@ -146,7 +168,7 @@ class User(object):
         if cls.get_by_email(email):
             return None
 
-        user = User(email=email, password=password)
+        user = User(email=email, password=password, active=active)
         user.save()
 
         return user
