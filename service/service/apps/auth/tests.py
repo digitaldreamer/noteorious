@@ -3,9 +3,10 @@ import unittest
 
 from pyramid import testing
 from auth.models import User
+from auth.exceptions import UserSaveError
 
 
-class UserTests(unittest.TestCase):
+class UserModelTests(unittest.TestCase):
     def setUp(self):
         from service import main
         from paste.deploy import appconfig
@@ -28,11 +29,20 @@ class UserTests(unittest.TestCase):
         user = User.create('world@example.com', 'world')
         self.assertTrue(user)
 
-        user2 = User.get_by_id(user.id)
-        self.assertTrue(user2)
+        # retrieve
+        self.assertTrue(User.get_by_id(user.id))
+        self.assertTrue(User.get_by_email(user.email))
 
-        user3 = User.get_by_email(user.email)
-        self.assertTrue(user3)
+        # duplicated users
+        self.assertFalse(User.create('world@example.com', 'world'))
+
+        try:
+            user2 = User(email='world@example.com', password='world')
+            user2.save()
+        except UserSaveError:
+            pass
+        else:
+            self.assertFalse('The user wrongly saved')
 
         # deletion
         self.assertTrue(user.delete())
@@ -43,6 +53,7 @@ class UserTests(unittest.TestCase):
         user = self.create_user()
         self.email(user)
         self.password(user)
+        self.authentication(user)
         self.assertTrue(user.delete())
 
     def create_user(self):
@@ -84,6 +95,13 @@ class UserTests(unittest.TestCase):
         # reset password
         user.password = 'hello'
         user.save()
+
+    def authentication(self, user):
+        user2 = User.authenticate_user(user.email, 'hello')
+
+        self.assertTrue(user.id == user2.id)
+        self.assertFalse(User.authenticate_user(user.email, 'world'))
+        self.assertFalse(User.authenticate_user('world@example.com', 'hello'))
 
     def reset(self):
         """

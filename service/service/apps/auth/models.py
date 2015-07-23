@@ -29,7 +29,7 @@ class User(object):
 
     @property
     def id(self):
-        return self.data.get('_id', '')
+        return self.data.get('_id', None)
 
     @property
     def email(self):
@@ -109,7 +109,7 @@ class User(object):
         """
         user = cls.get_by_email(email)
 
-        if not user.is_password(password):
+        if user and not user.authenticate(password):
             user = None
 
         return user
