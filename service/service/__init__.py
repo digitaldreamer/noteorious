@@ -49,5 +49,6 @@ def main(global_config, **settings):
 
     config.add_notfound_view(notfound, append_slash=True)
     config.include('main')
+    config.include('auth')
 
     return config.make_wsgi_app()
