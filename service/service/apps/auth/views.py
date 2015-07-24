@@ -69,6 +69,7 @@ class UserViews(object):
         user = User.create(email, password)
 
         if user:
+            # TODO: send activation email
             logger.debug('new user created')
             response_body = user.json
         else:
@@ -77,6 +78,40 @@ class UserViews(object):
             response_body = json.dumps({
                 'status': 'error',
                 'message': 'email already exists'
+            })
+
+        request.response.body = response_body
+        request.response.content_type = 'application/json'
+        return request.response
+
+    @user.post(schema=UserSchema)
+    def user_post(request):
+        user_id = request.matchdict['user_id']
+        user = User.get_by_id(user_id)
+
+        if user:
+            keys = request.validated.keys()
+
+            # check for fields to update
+            if 'active' in keys:
+                user.active = request.validated['active']
+            if 'email' in keys:
+                user.email = request.validated['email']
+            if 'password' in keys:
+                user.password = request.validated['password']
+
+            user.save()
+            response_body = json.dumps({
+                'status': 'success',
+                'message': 'user updated'
+            })
+            logger.debug('user:{} updated'.format(user_id))
+        else:
+            logger.debug('failed to update user:{}'.format(user_id))
+            request.response.status_int = 404
+            response_body = json.dumps({
+                'status': 'error',
+                'message': 'could not find user'
             })
 
         request.response.body = response_body

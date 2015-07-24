@@ -185,7 +185,7 @@ class UserAPI(unittest.TestCase):
         response = self.testapp.post_json('/users', payload, status=200)
         self.assertTrue(response.json['id'])
 
-        # check douplicate
+        # check duplicate
         response = self.testapp.post_json('/users', payload, status=400)
 
         # check database and clean up
