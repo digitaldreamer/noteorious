@@ -88,10 +88,16 @@ class UserViews(object):
     def user_post(request):
         user_id = request.matchdict['user_id']
         user = User.get_by_id(user_id)
+        keys = request.validated.keys()
 
-        if user:
-            keys = request.validated.keys()
-
+        if not keys:
+            logger.debug('failed to update user:{}'.format(user_id))
+            request.response.status_int = 400
+            response_body = json.dumps({
+                'status': 'error',
+                'message': 'nothing to update'
+            })
+        elif user:
             # check for fields to update
             if 'active' in keys:
                 user.active = request.validated['active']
@@ -100,12 +106,20 @@ class UserViews(object):
             if 'password' in keys:
                 user.password = request.validated['password']
 
-            user.save()
-            response_body = json.dumps({
-                'status': 'success',
-                'message': 'user updated'
-            })
-            logger.debug('user:{} updated'.format(user_id))
+            # save
+            if user.save():
+                logger.debug('user:{} updated'.format(user_id))
+                response_body = json.dumps({
+                    'status': 'success',
+                    'message': 'user updated'
+                })
+            else:
+                logger.debug('failed to update user:{}'.format(user_id))
+                request.response.status_int = 400
+                response_body = json.dumps({
+                    'status': 'error',
+                    'message': 'failed to update user'
+                })
         else:
             logger.debug('failed to update user:{}'.format(user_id))
             request.response.status_int = 404
