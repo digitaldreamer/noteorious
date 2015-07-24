@@ -91,7 +91,7 @@ class UserViews(object):
         keys = request.validated.keys()
 
         if not keys:
-            logger.debug('failed to update user:{}'.format(user_id))
+            logger.debug('failed to update user:{} no keys'.format(user_id))
             request.response.status_int = 400
             response_body = json.dumps({
                 'status': 'error',
@@ -114,14 +114,14 @@ class UserViews(object):
                     'message': 'user updated'
                 })
             else:
-                logger.debug('failed to update user:{}'.format(user_id))
+                logger.debug('failed to save user:{}'.format(user_id))
                 request.response.status_int = 400
                 response_body = json.dumps({
                     'status': 'error',
                     'message': 'failed to update user'
                 })
         else:
-            logger.debug('failed to update user:{}'.format(user_id))
+            logger.debug('failed to update user:{} user not found'.format(user_id))
             request.response.status_int = 404
             response_body = json.dumps({
                 'status': 'error',
