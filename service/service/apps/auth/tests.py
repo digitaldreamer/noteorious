@@ -152,3 +152,43 @@ class AuthAPI(unittest.TestCase):
             'password': 'hello',
         }
         response = self.testapp.post_json('/authenticate', payload, status=200)
+
+
+class UserAPI(unittest.TestCase):
+    def setUp(self):
+        from service import main
+        from paste.deploy import appconfig
+        from webtest import TestApp
+
+        # set settings
+        os.environ['PYRAMID_SETTINGS'] = 'development.ini#main'
+        self.settings = appconfig('config:{}'.format(os.environ['PYRAMID_SETTINGS']), relative_to='.')
+        app = main({}, **self.settings)
+        self.testapp = TestApp(app)
+        self.config = testing.setUp(settings=self.settings)
+
+    def tearDown(self):
+        user = user.get_by_email('hello@example.com')
+
+        if user:
+            user.delete()
+
+        testing.tearDown()
+
+    def test_user_creation(self):
+        response = self.testapp.post_json('/users', {}, status=400)
+
+        payload = {
+            'email': 'hello@example.com',
+            'password': 'hello',
+        }
+        response = self.testapp.post_json('/users', payload, status=200)
+        self.assertTrue(response.json['id'])
+
+        # check douplicate
+        response = self.testapp.post_json('/users', payload, status=400)
+
+        # check database and clean up
+        user = User.get_by_email('hello@example.com')
+        self.assertTrue(user)
+        self.assertTrue(user.delete())
