@@ -21,13 +21,7 @@ class MongoObject(object):
         }
 
         if mongo:
-            self.data = mongo
-
-            # clean up id
-            if 'id' in mongo.keys():
-                self.data['_id'] = self.data.pop('id')
-            else:
-                self.data['_id'] = ObjectId(mongo['_id'])
+            self.data = self.fromJSON(mongo)
 
     @property
     def json_raw(self):
@@ -67,6 +61,18 @@ class MongoObject(object):
         """
         data = copy.deepcopy(self.data)
         data['id'] = data.pop('_id')
+        return data
+
+    def fromJSON(self, data):
+        """
+        cleans up the data from a json object
+        """
+        # clean up id
+        if 'id' in data.keys():
+            data['_id'] = ObjectId(data.pop('id'))
+        else:
+            data['_id'] = ObjectId(data['_id'])
+
         return data
 
     def save(self):

@@ -16,9 +16,7 @@ class User(MongoObject):
     def __init__(self, email='', password='', active=False, mongo=None):
         super(User, self).__init__(mongo=mongo)
 
-        if mongo:
-            pass
-        else:
+        if not mongo:
             self.data.update({
                 'active': 'false',
                 'email': '',
