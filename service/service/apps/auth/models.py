@@ -1,57 +1,34 @@
 import bcrypt
-import copy
-import json
 
 from bson import ObjectId
 from datetime import datetime
 
 from service import logger
-from service.utils.jsonencoder import ComplexEncoder
 from storage.mongo import mongodb
+from main.models import MongoObject
 from auth.exceptions import UserSaveError
 
 
-class User(object):
+class User(MongoObject):
     data = {}
+    collection = 'users'
 
     def __init__(self, email='', password='', active=False, mongo=None):
-        now = datetime.utcnow()
-        self.data = {
-            'active': 'false',
-            'email': '',
-            'password': '',
-            'created': now,
-        }
+        super(User, self).__init__(mongo=mongo)
+
+        if mongo:
+            pass
+        else:
+            self.data.update({
+                'active': 'false',
+                'email': '',
+                'password': '',
+            })
 
         if email:
             self.email = email
         if password:
             self.password = password
-
-        if mongo:
-            self.data = mongo
-            self.data['_id'] = ObjectId(mongo['_id'])
-
-    @property
-    def json_raw(self):
-        """
-        generate the raw json
-        """
-        return json.dumps(self.data, cls=ComplexEncoder)
-
-    @property
-    def json(self):
-        """
-        generate cleaned json
-        """
-        data = copy.deepcopy(self.data)
-        data['id'] = data.pop('_id')
-        data.pop('password')
-        return json.dumps(data, cls=ComplexEncoder)
-
-    @property
-    def id(self):
-        return self.data.get('_id', None)
 
     @property
     def email(self):
@@ -73,6 +50,14 @@ class User(object):
         hashed = bcrypt.hashpw(str(password) + pepper, bcrypt.gensalt())
         self.data['password'] = hashed
 
+    def toJSON(self):
+        """
+        returns a cleaned jsonable object
+        """
+        data = super(User, self).toJSON()
+        data.pop('password')
+        return data
+
     def authenticate(self, password):
         """
         checks to see if the password matches the user's saved password
@@ -81,6 +66,7 @@ class User(object):
 
         validated = False
         pepper = config.get('pepper', '')
+
         hashed = bcrypt.hashpw(str(password) + pepper, self.data.get('password', '').encode('utf8'))
 
         if hashed == self.data.get('password', ''):
@@ -92,36 +78,13 @@ class User(object):
         """
         saves the user
         """
-        saved = False
         existing_user = User.get_by_email(self.email)
 
         # check for duplicate emails
         if existing_user and existing_user.id != self.id:
             raise UserSaveError('email already exists')
 
-        if '_id' in self.data.keys():
-            # the user needs updating
-            ret = mongodb.users.update({'_id': self.data['_id']}, self.data)
-
-            if ret['n']:
-                saved = True
-        else:
-            # new user
-            ret = mongodb.users.insert(self.data)
-
-            if ret:
-                saved = True
-
-        return saved
-
-    def delete(self):
-        deleted = False
-        ret = mongodb.users.remove({'_id': self.data['_id']})
-
-        if ret['n']:
-            deleted = True
-
-        return deleted
+        return super(User, self).save()
 
     @classmethod
     def authenticate_user(cls, email, password):
@@ -140,22 +103,10 @@ class User(object):
     def get_by_email(cls, email):
         user = None
 
-        mongo_user = mongodb.users.find_one({'email': email})
+        mongo_user = mongodb[cls.collection].find_one({'email': email})
 
         if mongo_user:
             user = User(mongo=mongo_user)
-
-        return user
-
-    @classmethod
-    def get_by_id(cls, id):
-        user = None
-        mongo_user = mongodb.users.find_one({'_id': ObjectId(id)})
-
-        if mongo_user:
-            user = User(mongo=mongo_user)
-        else:
-            logger.debug('did not find user id: {}'.format(id))
 
         return user
 

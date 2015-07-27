@@ -168,7 +168,7 @@ class UserAPI(unittest.TestCase):
         self.config = testing.setUp(settings=self.settings)
 
     def tearDown(self):
-        user = user.get_by_email('hello@example.com')
+        user = User.get_by_email('hello@example.com')
 
         if user:
             user.delete()

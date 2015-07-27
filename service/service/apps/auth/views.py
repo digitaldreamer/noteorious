@@ -36,14 +36,16 @@ class AuthViews(object):
         email = request.validated['email']
         password = request.validated['password']
 
+        print email, password
+
         user = User.authenticate_user(email, password)
         response_body = {}
 
         if user:
-            logger.debug('user:{} authenticated')
+            logger.debug('user:{} authenticated'.format(email))
             response_body = user.json
         else:
-            logger.debug('user:{} failed authentication')
+            logger.debug('user:{} failed authentication'.format(email))
             request.response.status_int = 401
             response_body = json.dumps({
                 'status': 'error',
