@@ -3,14 +3,13 @@ import bcrypt
 from bson import ObjectId
 from datetime import datetime
 
+from auth.exceptions import UserSaveError
+from main.models import MongoObject
 from service import logger
 from storage.mongo import mongodb
-from main.models import MongoObject
-from auth.exceptions import UserSaveError
 
 
 class User(MongoObject):
-    data = {}
     collection = 'users'
 
     def __init__(self, email='', password='', active=False, mongo=None):
